@@ -13,6 +13,7 @@ module.exports = class Resource extends Model {
               as: 'permissions',
               onDelete: 'CASCADE',
               foreignKey: {
+                name: 'resourceName',
                 allowNull: false
               }
             })
@@ -26,7 +27,8 @@ module.exports = class Resource extends Model {
     const sEnum = Sequelize.ENUM
     return {
       type: {
-        type: sEnum('model', 'controller', 'route', 'other'),
+        type: sEnum('model', 'route', 'other'),
+        defaultValue: 'other',
         allowNull: false
       },
       publicName: {

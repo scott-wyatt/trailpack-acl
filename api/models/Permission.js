@@ -9,16 +9,20 @@ module.exports = class Permission extends Model {
         classMethods: {
           associate: (models) => {
             models.Permission.belongsTo(models.Role, {
+              as: 'role',
               onDelete: 'CASCADE',
               foreignKey: {
                 primaryKey: true,
+                name: 'roleName',
                 allowNull: false
               }
             })
             models.Permission.belongsTo(models.Resource, {
+              as: 'resource',
               onDelete: 'CASCADE',
               foreignKey: {
                 primaryKey: true,
+                name: 'resourceName',
                 allowNull: false
               }
             })
@@ -29,6 +33,7 @@ module.exports = class Permission extends Model {
   }
 
   static schema(app, Sequelize) {
+    const sEnum = Sequelize.ENUM
     return {
       action: {
         type: Sequelize.STRING,
@@ -42,6 +47,9 @@ module.exports = class Permission extends Model {
       description: {
         type: Sequelize.STRING,
         allowNull: true
+      },
+      relation: {
+        type: sEnum('owner')
       }
     }
   }

@@ -1,10 +1,13 @@
 # trailpack-acl
 [![Gitter][gitter-image]][gitter-url]
+[![Known Vulnerabilities][snyk-image]][snyk-url]
 [![NPM version][npm-image]][npm-url]
 [![NPM downloads][npm-download]][npm-url]
 [![Build status][ci-image]][ci-url]
 [![Dependency Status][daviddm-image]][daviddm-url]
 [![Code Climate][codeclimate-image]][codeclimate-url]
+[![Beerpay](https://beerpay.io/jaumard/trailpack-acl/make-wish.svg?style=flat)](https://beerpay.io/jaumard/trailpack-acl)
+[![Beerpay](https://beerpay.io/jaumard/trailpack-acl/badge.svg?style=flat)](https://beerpay.io/jaumard/trailpack-acl)
 
 :package: Trailpack to manage permissions (ACL) on your Trails projects
 
@@ -49,6 +52,7 @@ Then permissions config :
 // config/permissions.js
   defaultRole: null, //Role name to use for anonymous users
   userRoleFieldName: 'roles', // Name of the association field for Role under User model
+  modelsAsResources: true, // Set all your models as resources automatically when initialize the database
   //Initial data added when DB is empty
   fixtures: {
     roles: [],
@@ -62,7 +66,7 @@ You also need to have a User model like:
 ```
 const Model = require('trails-model')
 const ModelPassport = require('trailpack-passport/api/models/User') // If you use trailpack-pasport
-const ModelPermissions = require('../api/models/User')
+const ModelPermissions = require('trailpack-acl/api/models/User')
 class User extends Model {
   static config(app, Sequelize) {
     return {
@@ -109,24 +113,96 @@ fixtures: {
       publicName: 'Model name'
     }],
     permissions: [{
-       RoleName: 'roleName',
-       ResourceName: 'modelName',
+       roleName: 'roleName',
+       resourceName: 'modelName',
        action: 'create'
      }, {
-       RoleName: 'roleName',
-       ResourceName: 'modelName',
+       roleName: 'roleName',
+       resourceName: 'modelName',
        action: 'update'
      }, {
-       RoleName: 'roleName',
-       ResourceName: 'modelName',
+       roleName: 'roleName',
+       resourceName: 'modelName',
        action: 'destroy'
      }, {
-       RoleName: 'roleName',
-       ResourceName: 'modelName',
+       roleName: 'roleName',
+       resourceName: 'modelName',
        action: 'access'
      }]
   }
 ```
+
+#### Owner permissions
+This trailpack can manage owner permissions on model instance, to do this you need to declare your permissions like this : 
+```
+{
+  roleName: 'roleName',
+  relation: 'owner',
+  resourceName: 'modelName',
+  action: 'create'
+}
+```
+You can create this permisions with sequelize model, with fixtures options or with PermissionService like this : 
+```
+this.app.services.PermissionService.grant('roleName', 'modelName', 'create', 'owner').then(perm => () => {})
+.catch(err => this.app.log.error(err))
+```
+
+Then you need to declare an `owners` attributes on your models like this : 
+```
+module.exports = class Item extends Model {
+  static config(app, Sequelize) {
+    return {
+      options: {
+        classMethods: {
+          associate: (models) => {
+            models.Item.belongsToMany(models.User, {
+              as: 'owners',
+              through: 'UserItem'//If many to many is needed
+            })
+          }
+        }
+      }
+    }
+  }
+}
+```
+If the model is under a trailpack and you don't have access to it you can add a model with same name on your project, 
+let do this for the model User witch is already in trailpack-permissions and trailpack-passport:
+ 
+```
+const ModelPassport = require('trailpack-passport/api/models/User')
+const ModelPermissions = require('../api/models/User')
+const Model = require('trails-model')
+module.exports = class User extends Model {
+  static config(app, Sequelize) {
+    return {
+      options: {
+        classMethods: {
+          associate: (models) => {
+            ModelPassport.config(app, Sequelize).options.classMethods.associate(models)
+            ModelPermissions.config(app, Sequelize).options.classMethods.associate(models)
+            models.User.belongsToMany(models.Item, {
+              as: 'items',
+              through: 'UserItem'
+            })
+          }
+        }
+      }
+    }
+  }
+  static schema(app, Sequelize) {
+      const UserTrailpackSchema = ModelPassport.schema(app, Sequelize)
+      let schema = {
+        //All your attributes here
+      }
+      return _.defaults(UserTrailpackSchema, schema)//merge passport attributs with your
+    }
+}
+```
+Like this you can add owners permissions on all models you want.
+
+WARNING ! Currently owner permissions are not supported for `update` `destroy` actions on multiple items (with no ID) 
 
 #### Dynamically with PermissionService
 ```
@@ -186,6 +262,8 @@ FootprintController: [ 'CheckPermissions.checkModel' ] // To check permissions o
 [MIT](https://github.com/jaumard/trailpack-acl/blob/master/LICENSE)
 
 
+[snyk-image]: https://snyk.io/test/github/jaumard/trailpack-acl/badge.svg
+[snyk-url]: https://snyk.io/test/github/jaumard/trailpack-acl/
 [npm-image]: https://img.shields.io/npm/v/trailpack-acl.svg?style=flat-square
 [npm-url]: https://npmjs.org/package/trailpack-acl
 [npm-download]: https://img.shields.io/npm/dt/trailpack-acl.svg
@@ -197,3 +275,8 @@ FootprintController: [ 'CheckPermissions.checkModel' ] // To check permissions o
 [codeclimate-url]: https://codeclimate.com/github/jaumard/trailpack-acl
 [gitter-image]: http://img.shields.io/badge/+%20GITTER-JOIN%20CHAT%20%E2%86%92-1DCE73.svg?style=flat-square
 [gitter-url]: https://gitter.im/trailsjs/trails
+
+## Support on Beerpay
+Hey dude! Help me out for a couple of :beers:!
+
+[![Beerpay](https://beerpay.io/jaumard/trailpack-acl/badge.svg?style=beer-square)](https://beerpay.io/jaumard/trailpack-acl)  [![Beerpay](https://beerpay.io/jaumard/trailpack-acl/make-wish.svg?style=flat-square)](https://beerpay.io/jaumard/trailpack-acl?focus=wish)
